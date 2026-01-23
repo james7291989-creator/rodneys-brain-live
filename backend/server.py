@@ -201,7 +201,7 @@ async def list_projects(user = Depends(get_current_user)):
     return [ProjectResponse(**p) for p in projects]
 
 @api_router.get("/projects/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str, authorization: str = None):
+async def get_project(project_id: str, user = Depends(get_current_user)):
     user = await get_current_user(authorization)
     project = await db.projects.find_one({"id": project_id, "user_id": user["id"]}, {"_id": 0})
     if not project:
