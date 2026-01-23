@@ -196,6 +196,7 @@ async def create_project(project_data: ProjectCreate, user = Depends(get_current
 @api_router.get("/projects", response_model=List[ProjectResponse])
 async def list_projects(user = Depends(get_current_user)):
     user = await get_current_user(authorization)
+    user = await get_current_user(authorization)
     projects = await db.projects.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [ProjectResponse(**p) for p in projects]
 
