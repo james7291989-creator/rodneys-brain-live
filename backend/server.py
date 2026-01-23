@@ -203,6 +203,7 @@ async def list_projects(user = Depends(get_current_user)):
 @api_router.get("/projects/{project_id}", response_model=ProjectResponse)
 async def get_project(project_id: str, user = Depends(get_current_user)):
     user = await get_current_user(authorization)
+    user = await get_current_user(authorization)
     project = await db.projects.find_one({"id": project_id, "user_id": user["id"]}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
