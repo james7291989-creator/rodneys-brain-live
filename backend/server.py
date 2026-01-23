@@ -227,7 +227,7 @@ async def update_project(project_id: str, update_data: ProjectUpdate, user = Dep
     return ProjectResponse(**updated)
 
 @api_router.delete("/projects/{project_id}")
-async def delete_project(project_id: str, authorization: str = None):
+async def delete_project(project_id: str, user = Depends(get_current_user)):
     user = await get_current_user(authorization)
     result = await db.projects.delete_one({"id": project_id, "user_id": user["id"]})
     if result.deleted_count == 0:
