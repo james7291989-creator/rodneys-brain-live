@@ -190,15 +190,11 @@ async def create_project(project_data: ProjectCreate, user = Depends(get_current
 
 @api_router.get("/projects", response_model=List[ProjectResponse])
 async def list_projects(user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
     projects = await db.projects.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [ProjectResponse(**p) for p in projects]
 
 @api_router.get("/projects/{project_id}", response_model=ProjectResponse)
 async def get_project(project_id: str, user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
     project = await db.projects.find_one({"id": project_id, "user_id": user["id"]}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -206,9 +202,6 @@ async def get_project(project_id: str, user = Depends(get_current_user)):
 
 @api_router.patch("/projects/{project_id}", response_model=ProjectResponse)
 async def update_project(project_id: str, update_data: ProjectUpdate, user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
-    
     project = await db.projects.find_one({"id": project_id, "user_id": user["id"]})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -223,8 +216,6 @@ async def update_project(project_id: str, update_data: ProjectUpdate, user = Dep
 
 @api_router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
     result = await db.projects.delete_one({"id": project_id, "user_id": user["id"]})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -337,9 +328,6 @@ Make the design modern, visually appealing with:
 
 @api_router.post("/generate")
 async def generate_code(request: GenerateRequest, user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
-    
     project = await db.projects.find_one({"id": request.project_id, "user_id": user["id"]})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
