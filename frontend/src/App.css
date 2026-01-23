@@ -1,34 +1,175 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* RodneysBrain - Famous AI App Builder Styles */
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+/* Layout containers */
+.app-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
 }
 
-.App-link {
-    color: #61dafb;
+/* Navigation */
+.nav-link {
+    @apply text-zinc-400 hover:text-white transition-colors duration-200;
 }
 
-@keyframes App-logo-spin {
+.nav-link-active {
+    @apply text-white;
+}
+
+/* Hero section */
+.hero-section {
+    @apply relative min-h-screen flex items-center justify-center overflow-hidden;
+}
+
+.hero-content {
+    @apply relative z-10 text-center px-6 max-w-4xl mx-auto;
+}
+
+/* Prompt input */
+.prompt-container {
+    @apply relative w-full max-w-2xl mx-auto mt-8;
+}
+
+.prompt-input {
+    @apply w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-6 py-4 text-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300;
+}
+
+.prompt-input:focus {
+    @apply shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)];
+}
+
+/* Generate button */
+.generate-btn {
+    @apply bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_-5px_rgba(59,130,246,0.4)] hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.6)] hover:-translate-y-0.5 active:translate-y-0;
+}
+
+.generate-btn:disabled {
+    @apply opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-[0_0_20px_-5px_rgba(59,130,246,0.4)];
+}
+
+/* Cards */
+.project-card {
+    @apply bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)];
+}
+
+.glass-card {
+    @apply bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl;
+}
+
+/* Status badges */
+.status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-created {
+    @apply bg-zinc-800 text-zinc-300;
+}
+
+.status-generating {
+    @apply bg-amber-900/50 text-amber-300;
+}
+
+.status-completed {
+    @apply bg-emerald-900/50 text-emerald-300;
+}
+
+.status-error {
+    @apply bg-red-900/50 text-red-300;
+}
+
+/* Editor layout */
+.editor-container {
+    @apply flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)] min-h-[500px];
+}
+
+.editor-panel {
+    @apply flex-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden;
+}
+
+.preview-panel {
+    @apply flex-1 bg-white rounded-xl overflow-hidden;
+}
+
+/* File tree */
+.file-tree {
+    @apply bg-zinc-900/50 border border-zinc-800 rounded-lg p-4;
+}
+
+.file-item {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors duration-200 text-sm text-zinc-300;
+}
+
+.file-item-active {
+    @apply bg-zinc-800 text-white;
+}
+
+/* Console/logs */
+.console-output {
+    @apply bg-zinc-950 rounded-lg p-4 font-mono text-sm text-zinc-300 overflow-auto max-h-48;
+}
+
+.console-line {
+    @apply py-0.5;
+}
+
+.console-info {
+    @apply text-blue-400;
+}
+
+.console-success {
+    @apply text-emerald-400;
+}
+
+.console-error {
+    @apply text-red-400;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center;
+}
+
+.modal-content {
+    @apply bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl;
+}
+
+/* Form elements */
+.form-input {
+    @apply w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200;
+}
+
+.form-label {
+    @apply block text-sm font-medium text-zinc-300 mb-2;
+}
+
+/* Animations */
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
     from {
-        transform: rotate(0deg);
+        opacity: 0;
+        transform: translateY(20px);
     }
     to {
-        transform: rotate(360deg);
+        opacity: 1;
+        transform: translateY(0);
     }
+}
+
+.typing-indicator {
+    @apply flex gap-1;
+}
+
+.typing-dot {
+    @apply w-2 h-2 bg-blue-500 rounded-full animate-bounce;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.2s;
 }
