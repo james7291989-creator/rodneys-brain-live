@@ -158,8 +158,6 @@ async def login(credentials: UserLogin):
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user = Depends(get_current_user)):
-    user = await get_current_user(authorization)
-    user = await get_current_user(authorization)
     return UserResponse(
         id=user["id"],
         email=user["email"],
