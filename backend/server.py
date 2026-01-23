@@ -341,7 +341,7 @@ Make the design modern, visually appealing with:
         yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
 
 @api_router.post("/generate")
-async def generate_code(request: GenerateRequest, authorization: str = None):
+async def generate_code(request: GenerateRequest, user = Depends(get_current_user)):
     user = await get_current_user(authorization)
     
     project = await db.projects.find_one({"id": request.project_id, "user_id": user["id"]})
