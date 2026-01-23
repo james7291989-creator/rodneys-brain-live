@@ -170,7 +170,7 @@ async def get_me(user = Depends(get_current_user)):
 # ==================== Project Routes ====================
 
 @api_router.post("/projects", response_model=ProjectResponse)
-async def create_project(project_data: ProjectCreate, authorization: str = None):
+async def create_project(project_data: ProjectCreate, user = Depends(get_current_user)):
     user = await get_current_user(authorization)
     
     project_id = str(uuid.uuid4())
