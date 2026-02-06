@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Header, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -14,6 +14,8 @@ import bcrypt
 import jwt
 import asyncio
 import json
+import secrets
+import string
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +29,17 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ.get('JWT_SECRET', 'rodneysbrain-secret-key-2025')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
+
+# Stripe Settings
+STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
+
+# Pricing Plans - Server-side defined (SECURITY: Never accept amounts from frontend)
+PRICING_PLANS = {
+    "beginner": {"name": "Beginner", "amount": 29.00, "type": "one_time", "features": ["10 AI generations", "Basic templates", "Email support"]},
+    "pro": {"name": "Pro", "amount": 47.00, "type": "subscription", "features": ["Unlimited generations", "All templates", "Priority support", "Custom domains"]},
+    "lifetime": {"name": "Lifetime", "amount": 297.00, "type": "one_time", "features": ["Lifetime access", "All features forever", "VIP support", "Early access"]},
+    "bronze": {"name": "Bronze", "amount": 97.00, "type": "subscription", "features": ["Team access (5 seats)", "API access", "White-label", "Dedicated support"]},
+}
 
 # Create the main app
 app = FastAPI(title="RodneysBrain API")
