@@ -93,6 +93,27 @@ class GenerateRequest(BaseModel):
     project_id: str
     prompt: str
 
+# ==================== Payment Models ====================
+
+class CheckoutRequest(BaseModel):
+    plan_id: str
+    email: EmailStr
+    origin_url: str
+
+class CheckoutStatusRequest(BaseModel):
+    session_id: str
+
+class PaymentTransactionResponse(BaseModel):
+    id: str
+    session_id: str
+    plan_id: str
+    plan_name: str
+    amount: float
+    email: str
+    status: str
+    payment_status: str
+    created_at: str
+
 # ==================== Auth Helpers ====================
 
 def hash_password(password: str) -> str:
