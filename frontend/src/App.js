@@ -5,6 +5,8 @@ import { Landing } from './pages/Landing';
 import { Dashboard } from './pages/Dashboard';
 import { Generator } from './pages/Generator';
 import { Project } from './pages/Project';
+import { Pricing } from './pages/Pricing';
+import { PaymentSuccess } from './pages/PaymentSuccess';
 import { Toaster } from './components/ui/sonner';
 import './App.css';
 
@@ -20,6 +22,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/generate/:projectId" element={<Generator />} />
               <Route path="/project/:projectId" element={<Project />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
             </Routes>
           </main>
           <Toaster 
