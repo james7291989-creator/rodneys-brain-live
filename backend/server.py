@@ -386,6 +386,284 @@ async def get_preview(project_id: str):
     
     return {"preview_html": project.get("preview_html", "")}
 
+# ==================== Stripe Payment Routes ====================
+
+def generate_temp_password(length=12):
+    """Generate a secure temporary password"""
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+@api_router.get("/pricing/plans")
+async def get_pricing_plans():
+    """Get available pricing plans"""
+    plans = []
+    for plan_id, plan in PRICING_PLANS.items():
+        plans.append({
+            "id": plan_id,
+            "name": plan["name"],
+            "amount": plan["amount"],
+            "type": plan["type"],
+            "features": plan["features"]
+        })
+    return {"plans": plans}
+
+@api_router.post("/checkout/session")
+async def create_checkout_session(request: CheckoutRequest, http_request: Request):
+    """Create a Stripe checkout session"""
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    # Validate plan exists (SECURITY: Amount comes from server, not frontend)
+    if request.plan_id not in PRICING_PLANS:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    
+    plan = PRICING_PLANS[request.plan_id]
+    amount = plan["amount"]
+    
+    # Build URLs from provided origin
+    success_url = f"{request.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{request.origin_url}/pricing?cancelled=true"
+    
+    # Initialize Stripe checkout
+    host_url = str(http_request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    # Create checkout session
+    checkout_request = CheckoutSessionRequest(
+        amount=amount,
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            "plan_id": request.plan_id,
+            "plan_name": plan["name"],
+            "email": request.email,
+            "source": "rodneysbrain"
+        }
+    )
+    
+    try:
+        session = await stripe_checkout.create_checkout_session(checkout_request)
+        
+        # Create payment transaction record BEFORE redirect
+        transaction_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        
+        transaction_doc = {
+            "id": transaction_id,
+            "session_id": session.session_id,
+            "plan_id": request.plan_id,
+            "plan_name": plan["name"],
+            "amount": amount,
+            "currency": "usd",
+            "email": request.email,
+            "status": "pending",
+            "payment_status": "initiated",
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        await db.payment_transactions.insert_one(transaction_doc)
+        logger.info(f"Created payment transaction: {transaction_id} for session: {session.session_id}")
+        
+        return {
+            "url": session.url,
+            "session_id": session.session_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Checkout session error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create checkout: {str(e)}")
+
+@api_router.get("/checkout/status/{session_id}")
+async def get_checkout_status(session_id: str, http_request: Request):
+    """Get checkout session status and update transaction"""
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    # Find the transaction
+    transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    # If already processed, return cached status
+    if transaction["payment_status"] in ["paid", "completed"]:
+        return {
+            "status": transaction["status"],
+            "payment_status": transaction["payment_status"],
+            "amount": transaction["amount"],
+            "plan_name": transaction["plan_name"],
+            "user_created": transaction.get("user_created", False)
+        }
+    
+    # Initialize Stripe checkout
+    host_url = str(http_request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        status_response = await stripe_checkout.get_checkout_status(session_id)
+        
+        now = datetime.now(timezone.utc).isoformat()
+        update_data = {
+            "status": status_response.status,
+            "payment_status": status_response.payment_status,
+            "updated_at": now
+        }
+        
+        # If payment successful and user not yet created
+        if status_response.payment_status == "paid" and not transaction.get("user_created"):
+            email = transaction["email"]
+            
+            # Check if user already exists
+            existing_user = await db.users.find_one({"email": email})
+            
+            if not existing_user:
+                # Create new user account
+                temp_password = generate_temp_password()
+                user_id = str(uuid.uuid4())
+                
+                user_doc = {
+                    "id": user_id,
+                    "email": email,
+                    "name": email.split("@")[0],
+                    "password_hash": hash_password(temp_password),
+                    "plan": transaction["plan_id"],
+                    "plan_name": transaction["plan_name"],
+                    "created_at": now,
+                    "payment_session_id": session_id
+                }
+                
+                await db.users.insert_one(user_doc)
+                update_data["user_created"] = True
+                update_data["user_id"] = user_id
+                update_data["temp_password"] = temp_password  # Store for confirmation page
+                
+                logger.info(f"Created user account for {email} after payment")
+            else:
+                # Update existing user's plan
+                await db.users.update_one(
+                    {"email": email},
+                    {"$set": {
+                        "plan": transaction["plan_id"],
+                        "plan_name": transaction["plan_name"],
+                        "updated_at": now
+                    }}
+                )
+                update_data["user_created"] = True
+                update_data["user_id"] = existing_user["id"]
+                update_data["existing_user"] = True
+                
+                logger.info(f"Updated plan for existing user {email}")
+        
+        # Update transaction
+        await db.payment_transactions.update_one(
+            {"session_id": session_id},
+            {"$set": update_data}
+        )
+        
+        # Get updated transaction
+        updated_transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        
+        return {
+            "status": status_response.status,
+            "payment_status": status_response.payment_status,
+            "amount": updated_transaction["amount"],
+            "plan_name": updated_transaction["plan_name"],
+            "user_created": updated_transaction.get("user_created", False),
+            "existing_user": updated_transaction.get("existing_user", False),
+            "temp_password": updated_transaction.get("temp_password"),
+            "email": updated_transaction["email"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Status check error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhooks"""
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    body = await request.body()
+    signature = request.headers.get("Stripe-Signature")
+    
+    host_url = str(request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        webhook_response = await stripe_checkout.handle_webhook(body, signature)
+        
+        logger.info(f"Webhook received: {webhook_response.event_type} for session {webhook_response.session_id}")
+        
+        if webhook_response.event_type == "checkout.session.completed":
+            session_id = webhook_response.session_id
+            
+            # Find and update transaction
+            transaction = await db.payment_transactions.find_one({"session_id": session_id})
+            
+            if transaction and transaction.get("payment_status") != "paid":
+                now = datetime.now(timezone.utc).isoformat()
+                
+                # Update payment status
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id},
+                    {"$set": {
+                        "status": "complete",
+                        "payment_status": "paid",
+                        "updated_at": now
+                    }}
+                )
+                
+                # Create user if not exists
+                email = transaction["email"]
+                existing_user = await db.users.find_one({"email": email})
+                
+                if not existing_user:
+                    temp_password = generate_temp_password()
+                    user_id = str(uuid.uuid4())
+                    
+                    user_doc = {
+                        "id": user_id,
+                        "email": email,
+                        "name": email.split("@")[0],
+                        "password_hash": hash_password(temp_password),
+                        "plan": transaction["plan_id"],
+                        "plan_name": transaction["plan_name"],
+                        "created_at": now,
+                        "payment_session_id": session_id
+                    }
+                    
+                    await db.users.insert_one(user_doc)
+                    
+                    await db.payment_transactions.update_one(
+                        {"session_id": session_id},
+                        {"$set": {
+                            "user_created": True,
+                            "user_id": user_id,
+                            "temp_password": temp_password
+                        }}
+                    )
+                    
+                    logger.info(f"Webhook: Created user account for {email}")
+                
+                logger.info(f"Payment completed for session: {session_id}")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
 # ==================== Health Check ====================
 
 @api_router.get("/")
