@@ -64,16 +64,16 @@ code, .font-mono {
 
 /* Glow effects */
 .glow-blue {
-    box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 40px -10px rgba(163, 230, 53, 0.4);
 }
 
 .glow-blue-hover:hover {
-    box-shadow: 0 0 50px -10px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 50px -10px rgba(163, 230, 53, 0.6);
 }
 
 /* Hero glow background */
 .hero-glow {
-    background: radial-gradient(circle at 50% 30%, rgba(59, 130, 246, 0.15) 0%, rgba(9, 9, 11, 0) 60%);
+    background: radial-gradient(circle at 50% 30%, rgba(163, 230, 53, 0.12) 0%, rgba(9, 9, 11, 0) 60%);
 }
 
 /* Text gradient */
@@ -97,8 +97,8 @@ code, .font-mono {
 
 /* Pulse glow */
 @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px -5px rgba(59, 130, 246, 0.4); }
-    50% { box-shadow: 0 0 40px -5px rgba(59, 130, 246, 0.6); }
+    0%, 100% { box-shadow: 0 0 20px -5px rgba(163, 230, 53, 0.4); }
+    50% { box-shadow: 0 0 40px -5px rgba(163, 230, 53, 0.6); }
 }
 
 .animate-pulse-glow {
@@ -135,19 +135,19 @@ code, .font-mono {
         --card-foreground: 0 0% 98%;
         --popover: 240 6% 9%;
         --popover-foreground: 0 0% 98%;
-        --primary: 217 91% 60%;
-        --primary-foreground: 0 0% 100%;
+        --primary: 82 85% 55%;
+        --primary-foreground: 0 0% 0%;
         --secondary: 240 5% 96%;
         --secondary-foreground: 240 6% 9%;
         --muted: 240 4% 16%;
         --muted-foreground: 240 5% 65%;
-        --accent: 38 92% 50%;
-        --accent-foreground: 0 0% 100%;
+        --accent: 82 85% 55%;
+        --accent-foreground: 0 0% 0%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
         --border: 240 4% 16%;
         --input: 240 4% 16%;
-        --ring: 217 91% 60%;
+        --ring: 82 85% 55%;
         --radius: 0.5rem;
     }
 }
