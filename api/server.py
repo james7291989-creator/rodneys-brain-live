@@ -29,3 +29,46 @@ async def login(creds: dict):
     u = await db.users.find_one({"email": creds['email']})
     if not u or not verify_pw(creds['password'], u["pw"]): raise HTTPException(401)
     return {"token": jwt.encode({"u_id": u["id"]}, JWT_SECRET), "user": u}
+
+# ====================
+# NEW OPENAI GENERATOR
+# ====================
+from fastapi.responses import StreamingResponse
+from openai import AsyncOpenAI
+import os, json, asyncio
+
+# Initialize official OpenAI client
+openai_client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+async def generate_with_openai(prompt: str):
+    sys_prompt = 'You are Famous AI. Output ONLY JSON with this structure: {"files": {"index.html": "..."}, "preview_html": "..."}'
+    yield f"data: {json.dumps({'type': 'status', 'content': 'Connecting to OpenAI...'})}\n\n"
+    
+    try:
+        res = await openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]
+        )
+        
+        # Clean up the response
+        content = res.choices[0].message.content.replace('```json', '').replace('```', '').strip()
+        result = json.loads(content)
+        
+        # Stream files back to the frontend
+        for name, file_content in result.get("files", {}).items():
+            yield f"data: {json.dumps({'type': 'file', 'filename': name, 'content': file_content})}\n\n"
+            await asyncio.sleep(0.1)
+            
+        yield f"data: {json.dumps({'type': 'preview', 'content': result.get('preview_html', '')})}\n\n"
+        
+    except Exception as e:
+        yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+@app.post("/api/generate")
+async def generate_code(request: dict):
+    # For now, we bypass auth to test the engine directly
+    prompt = request.get("prompt", "A simple hello world button")
+    return StreamingResponse(
+        generate_with_openai(prompt),
+        media_type="text/event-stream"
+    )
