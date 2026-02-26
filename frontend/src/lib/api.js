@@ -69,65 +69,52 @@ export const projectsApi = {
   },
   delete: async (id) => {
     const response = await api.delete(`/projects/${id}`);
-    return response.data;
-  },
-};
+    // Code Generation API (Hijacked to Gemini Engine)
+export const generateCode = async (projectId, prompt, onEvent) => {
+  try {
+    onEvent({ type: 'status', content: 'Waking up Rodney\'s Brain...' });
 
-// Code Generation API (SSE)
-export const generateCode = (projectId, prompt, onEvent) => {
-  const token = localStorage.getItem('auth_token');
-  
-  return new Promise((resolve, reject) => {
-    fetch(`${API_BASE}/generate`, {
+    const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ project_id: projectId, prompt }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Generation failed');
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        const processStream = async () => {
-          while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) {
-              resolve();
-              break;
-            }
-            
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  onEvent(data);
-                } catch (e) {
-                  console.error('Parse error:', e);
-                }
-              }
-            }
-          }
-        };
-        
-        processStream();
-      })
-      .catch(reject);
-  });
-};
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+    });
 
-// Preview API
+    if (!response.ok) throw new Error('Brain Connection Failed');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullCode = '';
+
+    onEvent({ type: 'status', content: 'Writing masterpiece...' });
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        onEvent({ type: 'complete', content: 'Code generation complete!' });
+        const finalDisplay = fullCode.replace(/```(html|javascript|css|tsx|jsx)?\n/g, '').replace(/```/g, '');
+        onEvent({ type: 'preview', content: finalDisplay });
+        break;
+      }
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('0:')) {
+          try {
+            const text = JSON.parse(line.slice(2));
+            fullCode += text;
+            const displayCode = fullCode.replace(/```(html|javascript|css|tsx|jsx)?\n/g, '').replace(/```/g, '');
+            onEvent({ type: 'file', filename: 'index.html', content: displayCode });
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (error) {
+    onEvent({ type: 'error', content: `System Error: ${error.message}` });
+  }
+};
 export const getPreview = async (projectId) => {
   const response = await axios.get(`${API_BASE}/preview/${projectId}`);
   return response.data;
